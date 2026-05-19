@@ -188,8 +188,8 @@ def main(page: ft.Page):
             with open("receipt.txt", "w", encoding="utf-8") as f:
                 f.write(receipt_text)
 
-    status_msg.value = "✅ Receipt saved as receipt.txt"
-    page.update()
+            status_msg.value = "✅ Receipt saved as receipt.txt"
+            page.update()
 
         # Reset completely for next customer
         current_invoice_items.clear()

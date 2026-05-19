@@ -185,7 +185,9 @@ def main(page: ft.Page):
         
         if print_receipt:
             receipt_text = generate_receipt_text(party,current_invoice_items,prev,total_due)
-            with open("receipt.txt", "w", encoding="utf-8") as f:
+            downloads_path = "/storage/emulated/0/Download/receipt.txt"
+
+            with open(downloads_path, "w", encoding="utf-8") as f:
                 f.write(receipt_text)
 
             status_msg.value = "✅ Receipt saved as receipt.txt"

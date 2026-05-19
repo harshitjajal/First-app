@@ -1,4 +1,4 @@
-`import os
+import os
 import ssl
 
 os.environ['PYTHONHTTPSVERIFY'] = '0'

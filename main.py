@@ -10,7 +10,6 @@ except AttributeError:
 import flet as ft
 import sqlite3
 import asyncio
-from bleak import BleakScanner, BleakClient
 from escpos.printer import Dummy
 
 # --- UPDATED DATABASE SETUP ---
@@ -68,32 +67,28 @@ def generate_receipt_bytes(party, items_list, prev, total):
     d.cut()
     return d.output
 
-async def send_to_printer_async(raw_data, status_text, page):
-    status_text.value = "Scanning for Bluetooth printers..."
-    page.update()
-    try:
-        devices = await BleakScanner.discover()
-        for d in devices:
-            if d.name and ("Printer" in d.name or "MTP" in d.name):
-                status_text.value = f"Connecting to {d.name}..."
-                page.update()
-                async with BleakClient(d.address) as client:
-                    services = await client.get_services()
-                    for service in services:
-                        for char in service.characteristics:
-                            if "write" in char.properties:
-                                chunk_size = 20
-                                for i in range(0, len(raw_data), chunk_size):
-                                    chunk = raw_data[i:i+chunk_size]
-                                    await client.write_gatt_char(char.uuid, chunk)
-                                    await asyncio.sleep(0.01)
-                                status_text.value = "✅ Printed successfully!"
-                                page.update()
-                                return
-        status_text.value = "⚠️ Saved, but no Bluetooth printer found."
-    except Exception as e:
-        status_text.value = f"❌ Printing failed: {str(e)}"
-    page.update()
+init_database()
+def generate_receipt_text(party, items_list, prev, total):
+    lines = []
+
+    lines.append("       INVOICE")
+    lines.append("----------------------------")
+    lines.append(f"Party: {party}")
+    lines.append("----------------------------")
+
+    for item in items_list:
+        row_total = item['qty'] * item['price']
+
+        lines.append(
+            f"{item['name']} x{item['qty']} = {row_total:.2f}"
+        )
+
+    lines.append("----------------------------")
+    lines.append(f"Previous: {prev:.2f}")
+    lines.append(f"TOTAL: {total:.2f}")
+    lines.append("----------------------------")
+
+    return "\n".join(lines)
 
 # --- APP INTERFACE ---
 def main(page: ft.Page):
@@ -187,10 +182,14 @@ def main(page: ft.Page):
 
         status_msg.value = "✅ Complete Invoice Saved to Database!"
         page.update()
-
+        
         if print_receipt:
-            raw_bytes = generate_receipt_bytes(party, current_invoice_items, prev, total_due)
-            asyncio.run(send_to_printer_async(raw_bytes, status_msg, page))
+            receipt_text = generate_receipt_text(party,current_invoice_items,prev,total_due)
+            with open("receipt.txt", "w", encoding="utf-8") as f:
+                f.write(receipt_text)
+
+    status_msg.value = "✅ Receipt saved as receipt.txt"
+    page.update()
 
         # Reset completely for next customer
         current_invoice_items.clear()
